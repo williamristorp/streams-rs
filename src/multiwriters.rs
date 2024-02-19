@@ -68,7 +68,7 @@ impl<'a> Write for MultiWriter<'a> {
 /// Copy the entire contents of a reader into multiple writers.
 ///
 /// Uses a [`MultiWriter`] and [`std::io::copy`].
-pub fn copy_many<R: Read + ?Sized>(
+pub fn copy_into_many<R: Read + ?Sized>(
     reader: &mut R,
     writers: Vec<&mut dyn Write>,
 ) -> io::Result<u64> {
@@ -96,11 +96,11 @@ mod tests {
     }
 
     #[test]
-    fn copy_many_vec() {
+    fn copy_into_many_vec() {
         let input = b"Hello, world!";
         let mut writers = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
 
-        crate::copy_many(
+        crate::copy_into_many(
             &mut &input[..],
             writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
         )
