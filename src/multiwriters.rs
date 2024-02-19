@@ -1,11 +1,44 @@
 use std::io::{self, Read, Write};
 
+/// Provides a single [`Writer`](Write) that writes to multiple writers sequentially.
+///
+/// The [`write`](MultiWriter::write) implementation calls [`write_all`](Write::write_all) on each of the internal writers in sequence
+/// and therefore behaves as a call to [`write_all`](Write::write_all) itself;
+/// in fact, [`MultiWriter::write_all`] simply calls this function, discarding the returned `usize`
+/// (which will always be exactly the length of the input buffer (`buf.len()`)).
+///
+/// # Errors
+///
+/// If any of the internal writers fail during the iteration,
+/// execution will immediately halt and the error will be returned.
+/// Currently, this implementation provides no method of determining which writer failed.
+///
+/// Keep in mind that some of the internal writes may have been succesfully executed even if a following write fails.
+///
+/// # Blocking
+///
+/// `MultiWriter` is blocking to the extent that its internal writers are blocking.
+///
+/// # Implementation Notes
+///
+/// As we can only return a single `usize`,
+/// and each internal writer may return differing numbers of bytes from their respective [`write`](Write::write) call,
+/// it is not trivial how one could avoid using [`write_all`](Write::write_all).
+///
+/// One alternative would be to call [`write`](Write::write) on the first internal writer,
+/// then use its returned `usize` and call [`write_all`](Write::write_all) on the remaining writers,
+/// writing only the same number of bytes as the first.
+/// To avoid assigning arbitary and non-obvious meaning to the order of the internal writers [`Vec`],
+/// such an implementation should consider adopting a master-slaves pattern and make it obvious that the first writer's result will impact the others.
 #[derive(Default)]
 pub struct MultiWriter<'a> {
     writers: Vec<&'a mut dyn Write>,
 }
 
 impl<'a> Write for MultiWriter<'a> {
+    /// Write a buffer into each internal writer sequentially.
+    ///
+    /// The returned `usize` will always be exactly the length of the input buffer (`buf.len()`). See [`MultiWriter`] for more information.
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         for writer in &mut self.writers {
             writer.write_all(buf)?;
@@ -14,6 +47,7 @@ impl<'a> Write for MultiWriter<'a> {
         Ok(buf.len())
     }
 
+    /// Flush each internal output stream sequentially, ensuring that all intermediately buffered contents reach their destinations.
     fn flush(&mut self) -> io::Result<()> {
         for writer in &mut self.writers {
             writer.flush()?;
@@ -21,8 +55,19 @@ impl<'a> Write for MultiWriter<'a> {
 
         Ok(())
     }
+
+    /// Calls [`write`](MultiWriter::write) and discards the returned `usize`.
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        // Explicitely drop the returned `usize` to make `cargo clippy` happy.
+        let _ = self.write(buf)?;
+
+        Ok(())
+    }
 }
 
+/// Copy the entire contents of a reader into multiple writers.
+///
+/// Uses a [`MultiWriter`] and [`std::io::copy`].
 pub fn copy_many<R: Read + ?Sized>(
     reader: &mut R,
     writers: Vec<&mut dyn Write>,
