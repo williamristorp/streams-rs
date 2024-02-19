@@ -76,6 +76,20 @@ pub fn copy_into_many<R: Read + ?Sized>(
     io::copy(reader, &mut multi_writer)
 }
 
+/// Utility macro to avoid manually casting writers to `&mut dyn std::io::Write`.
+#[macro_export]
+macro_rules! copy_into_many {
+    ($reader:expr,$writers:expr) => {{
+        $crate::copy_into_many(
+            $reader,
+            $writers
+                .iter_mut()
+                .map(|o| o as &mut dyn std::io::Write)
+                .collect(),
+        )
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -105,6 +119,18 @@ mod tests {
             writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
         )
         .unwrap();
+
+        for writer in writers {
+            assert_eq!(writer[..], *b"Hello, world!");
+        }
+    }
+
+    #[test]
+    fn copy_into_many_macro() {
+        let input = b"Hello, world!";
+        let mut writers = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
+
+        crate::copy_into_many!(&mut &input[..], writers).unwrap();
 
         for writer in writers {
             assert_eq!(writer[..], *b"Hello, world!");
