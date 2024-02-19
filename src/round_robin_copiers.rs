@@ -13,6 +13,10 @@ impl<'a> RoundRobinCopier<'a> {
     }
 
     pub fn copy<R: Read + ?Sized>(&mut self, reader: &mut R) -> io::Result<u64> {
+        if self.writers.is_empty() {
+            return Err(io::Error::from(io::ErrorKind::WriteZero));
+        }
+
         let index = self.current;
 
         // Increment the current index, wrapping around if we exceed the number of internal writers.
