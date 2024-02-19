@@ -30,7 +30,6 @@ use std::io::{self, Read, Write};
 /// writing only the same number of bytes as the first.
 /// To avoid assigning arbitary and non-obvious meaning to the order of the internal writers [`Vec`],
 /// such an implementation should consider adopting a master-slaves pattern and make it obvious that the first writer's result will impact the others.
-#[derive(Default)]
 pub struct MultiWriter<'a> {
     writers: Vec<&'a mut dyn Write>,
 }
