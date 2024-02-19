@@ -1,3 +1,3 @@
-mod multiwriters;
+mod multi_writers;
 
-pub use multiwriters::*;
+pub use multi_writers::*;
