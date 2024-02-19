@@ -34,6 +34,12 @@ pub struct MultiWriter<'a> {
     writers: Vec<&'a mut dyn Write>,
 }
 
+impl<'a> MultiWriter<'a> {
+    pub fn new(writers: Vec<&'a mut dyn Write>) -> Self {
+        Self { writers }
+    }
+}
+
 impl<'a> Write for MultiWriter<'a> {
     /// Write a buffer into each internal writer sequentially.
     ///
