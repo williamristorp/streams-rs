@@ -89,7 +89,7 @@ macro_rules! copy_into_many {
             $reader,
             $writers
                 .iter_mut()
-                .map(|o| o as &mut dyn std::io::Write)
+                .map(|w| w as &mut dyn std::io::Write)
                 .collect(),
         )
     }};
@@ -117,9 +117,8 @@ mod tests {
     #[test]
     fn multi_writer() {
         let mut writers = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
-        let mut multi_writer = crate::MultiWriter {
-            writers: writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
-        };
+        let mut multi_writer =
+            crate::MultiWriter::new(writers.iter_mut().map(|w| w as &mut dyn Write).collect());
 
         let input = b"Hello, world!";
         multi_writer.write_all(input).unwrap();
@@ -136,7 +135,7 @@ mod tests {
 
         crate::copy_into_many(
             &mut &input[..],
-            writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
+            writers.iter_mut().map(|w| w as &mut dyn Write).collect(),
         )
         .unwrap();
 
