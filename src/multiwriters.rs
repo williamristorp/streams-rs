@@ -78,31 +78,36 @@ pub fn copy_many<R: Read + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::io::Write;
 
     #[test]
     fn multi_writer() {
         let mut writers = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
-        let mut multi_writer = MultiWriter {
+        let mut multi_writer = crate::MultiWriter {
             writers: writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
         };
 
         let input = b"Hello, world!";
         multi_writer.write_all(input).unwrap();
 
-        for output in writers {
-            assert_eq!(output[..], *b"Hello, world!");
+        for writer in writers {
+            assert_eq!(writer[..], *b"Hello, world!");
         }
     }
 
     #[test]
     fn copy_many_vec() {
         let input = b"Hello, world!";
-        let mut outputs = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
-        copy_many(
+        let mut writers = vec![Vec::<u8>::new(), Vec::new(), Vec::new()];
+
+        crate::copy_many(
             &mut &input[..],
-            outputs.iter_mut().map(|o| o as &mut dyn Write).collect(),
+            writers.iter_mut().map(|o| o as &mut dyn Write).collect(),
         )
         .unwrap();
+
+        for writer in writers {
+            assert_eq!(writer[..], *b"Hello, world!");
+        }
     }
 }
