@@ -90,9 +90,24 @@ macro_rules! copy_into_many {
     }};
 }
 
+/// Utility macro to avoid collecting writers into a `Vec<&mut dyn std::io::Write>`.
+#[macro_export]
+macro_rules! copy_into_all {
+    ($reader:expr,$($writer:expr),*) => {{
+        let writers = vec![$(&mut $writer as &mut dyn std::io::Write,)*];
+        $crate::copy_into_many(
+            $reader,
+            writers,
+        )
+    }};
+}
+
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::{
+        collections::VecDeque,
+        io::{Cursor, Write},
+    };
 
     #[test]
     fn multi_writer() {
@@ -135,5 +150,19 @@ mod tests {
         for writer in writers {
             assert_eq!(writer[..], *b"Hello, world!");
         }
+    }
+
+    #[test]
+    fn copy_into_all_macro() {
+        let input = b"Hello, world!";
+        let mut writer1 = Vec::new();
+        let mut writer2 = Cursor::new(Vec::new());
+        let mut writer3 = VecDeque::new();
+
+        crate::copy_into_all!(&mut &input[..], writer1, writer2, writer3).unwrap();
+
+        assert_eq!(writer1, *b"Hello, world!");
+        assert_eq!(writer2.into_inner(), *b"Hello, world!");
+        assert_eq!(writer3, *b"Hello, world!");
     }
 }
